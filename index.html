@@ -682,6 +682,45 @@
   .icon-btn-dup { background: var(--gray-1); color: var(--gray-5); }
   .icon-btn-dup:hover { background: var(--gray-2); color: var(--gray-6); }
 
+  /* ── PRICE CALCULATOR ── */
+  .calc-out {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px dashed var(--gray-2);
+    font-size: 14px;
+  }
+  .calc-out:last-child { border-bottom: none; }
+  .calc-out .lbl { color: var(--gray-5); }
+  .calc-out .val { font-weight: 700; color: var(--gray-6); font-family: 'Space Mono', monospace; }
+  .calc-out .val.neg { color: var(--red); }
+  .calc-out .val.pos { color: var(--green); }
+
+  .calc-highlight {
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-mid) 100%);
+    color: #fff;
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+    margin-bottom: 14px;
+  }
+  .calc-highlight .small { font-size: 12px; opacity: 0.9; letter-spacing: 0.02em; }
+  .calc-highlight .big { font-size: 30px; font-weight: 700; font-family: 'Space Mono', monospace; line-height: 1.2; }
+  .calc-highlight .sub { font-size: 12px; opacity: 0.9; margin-top: 2px; }
+
+  .input-suffix { position: relative; }
+  .input-suffix input { padding-right: 34px; }
+  .input-suffix .sfx {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: var(--gray-4);
+    font-weight: 600;
+    pointer-events: none;
+  }
+
   /* ── DESKTOP CENTERED LAYOUT ── */
   @media (min-width: 760px) {
     body { background: var(--gray-1); }
@@ -759,6 +798,10 @@
   <div class="nav-tab" data-page="descarga" onclick="switchPage('descarga')">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg>
     Descarga
+  </div>
+  <div class="nav-tab" data-page="calculadora" onclick="switchPage('calculadora')">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="18"/><line x1="8" y1="18" x2="12" y2="18"/></svg>
+    Calculadora
   </div>
   <div class="nav-tab" onclick="openConfigModal()">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
@@ -1019,6 +1062,97 @@
   <div style="height:80px"></div>
 </div>
 
+<!-- ══════════════════════════════════════════════════
+     PAGE: CALCULADORA DE PRECIO
+═══════════════════════════════════════════════════ -->
+<div class="page" id="page-calculadora">
+  <div class="section-header">
+    <h1 style="font-family: 'Quicksand', sans-serif;">Calculadora de Precio</h1>
+    <span class="date-badge" id="dateDisplay4"></span>
+  </div>
+
+  <div class="export-section">
+    <!-- Resultado destacado -->
+    <div class="calc-highlight">
+      <div class="small">💰 Precio de venta sugerido (Uber Eats)</div>
+      <div class="big" id="calcSuggested">$0</div>
+      <div class="sub" id="calcSuggestedSub">Para cubrir comisión y ganancia objetivo</div>
+    </div>
+
+    <!-- Costos de compra -->
+    <div class="export-card">
+      <h3>🛒 Costo de compra</h3>
+      <p>Ingresa uno y el otro se calcula con el IVA. El costo real usado es el <strong>con IVA</strong>.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Compra con IVA</label>
+          <div class="input-suffix">
+            <input type="number" id="calcCostIva" placeholder="0" min="0" step="1" oninput="onCostIvaInput()" />
+            <span class="sfx">$</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Compra sin IVA</label>
+          <div class="input-suffix">
+            <input type="number" id="calcCostNet" placeholder="0" min="0" step="1" oninput="onCostNetInput()" />
+            <span class="sfx">$</span>
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>IVA</label>
+        <div class="input-suffix">
+          <input type="number" id="calcIva" placeholder="19" min="0" step="0.5" oninput="onIvaInput()" />
+          <span class="sfx">%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parámetros ajustables -->
+    <div class="export-card">
+      <h3>⚙️ Parámetros</h3>
+      <p>Se guardan automáticamente para tus próximos cálculos.</p>
+      <div class="field-row">
+        <div class="field">
+          <label>Comisión Uber Eats</label>
+          <div class="input-suffix">
+            <input type="number" id="calcCommission" placeholder="30" min="0" max="99" step="0.5" oninput="onParamInput()" />
+            <span class="sfx">%</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Ganancia esperada</label>
+          <div class="input-suffix">
+            <input type="number" id="calcProfit" placeholder="30" min="0" step="1" oninput="onParamInput()" />
+            <span class="sfx">%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Precio final + desglose -->
+    <div class="export-card">
+      <h3>📊 Desglose</h3>
+      <div class="field">
+        <label>Precio de venta final (ajustable)</label>
+        <div class="input-suffix">
+          <input type="number" id="calcFinalPrice" placeholder="0" min="0" step="1" oninput="onFinalPriceInput()" />
+          <span class="sfx">$</span>
+        </div>
+        <button class="btn btn-ghost" style="margin-top:8px;padding:5px 10px;font-size:11px" onclick="useSuggestedPrice()">↺ Usar precio sugerido</button>
+      </div>
+
+      <div class="calc-out"><span class="lbl">Costo (con IVA)</span><span class="val" id="outCost">$0</span></div>
+      <div class="calc-out"><span class="lbl">Comisión Uber Eats</span><span class="val neg" id="outCommission">$0</span></div>
+      <div class="calc-out"><span class="lbl">Ingreso neto (lo que recibes)</span><span class="val" id="outNet">$0</span></div>
+      <div class="calc-out"><span class="lbl">Valor neto de ganancia</span><span class="val pos" id="outProfit">$0</span></div>
+      <div class="calc-out"><span class="lbl">Margen real sobre costo</span><span class="val" id="outMargin">0%</span></div>
+    </div>
+  </div>
+
+  <div style="height:80px"></div>
+</div>
+
 <script>
 // ══════════════════════════════════════════════════
 // CONFIGURATION
@@ -1027,6 +1161,9 @@ const KEY_SB_URL = 'cf_sb_url';
 const KEY_SB_KEY = 'cf_sb_key';
 const KEY_CL_CLOUD = 'cf_cloud';
 const KEY_CL_PRESET = 'cf_preset';
+const KEY_CALC_IVA = 'cf_calc_iva';
+const KEY_CALC_COMM = 'cf_calc_comm';
+const KEY_CALC_PROFIT = 'cf_calc_profit';
 
 // Dynamic config variables loaded from localStorage with default fallbacks
 let SUPABASE_URL = localStorage.getItem(KEY_SB_URL) || 'https://pazmvvuqgqsmymesajmr.supabase.co';
@@ -1049,6 +1186,7 @@ document.addEventListener('DOMContentLoaded', () => {
   checkConfig();
   loadProducts();
   loadCategories();
+  initCalculator();
 
   // Mark the form as dirty on any edit
   ['fieldName','fieldBarcode','fieldCategory','fieldVariant','fieldDescription',
@@ -1089,6 +1227,8 @@ function updateDateBadges() {
   document.getElementById('dateDisplay').textContent = dateStr;
   document.getElementById('dateDisplay2').textContent = dateStr;
   document.getElementById('dateDisplay3').textContent = dateStr;
+  const d4 = document.getElementById('dateDisplay4');
+  if (d4) d4.textContent = dateStr;
 }
 
 function checkConfig() {
@@ -1164,6 +1304,7 @@ function switchPage(page) {
   document.getElementById('page-' + page).classList.add('active');
   document.querySelector(`[data-page="${page}"]`).classList.add('active');
   if (page === 'descarga') loadExportStats();
+  if (page === 'calculadora') recalcPrice();
 }
 
 // ══════════════════════════════════════════════════
@@ -1705,6 +1846,94 @@ function showToast(msg, type = '') {
   toast.innerHTML = `<span>${msg}</span>`;
   container.appendChild(toast);
   setTimeout(() => toast.remove(), 3000);
+}
+
+// ══════════════════════════════════════════════════
+// PRICE CALCULATOR
+// ══════════════════════════════════════════════════
+let calcManualPrice = false; // true when the user overrode the final price
+
+function num(id) { return parseFloat(document.getElementById(id).value) || 0; }
+
+function initCalculator() {
+  document.getElementById('calcIva').value = localStorage.getItem(KEY_CALC_IVA) || '19';
+  document.getElementById('calcCommission').value = localStorage.getItem(KEY_CALC_COMM) || '30';
+  document.getElementById('calcProfit').value = localStorage.getItem(KEY_CALC_PROFIT) || '30';
+  recalcPrice();
+}
+
+// Cost: typing "con IVA" derives "sin IVA"
+function onCostIvaInput() {
+  const iva = num('calcIva') / 100;
+  document.getElementById('calcCostNet').value = round0(num('calcCostIva') / (1 + iva));
+  recalcPrice();
+}
+// Cost: typing "sin IVA" derives "con IVA"
+function onCostNetInput() {
+  const iva = num('calcIva') / 100;
+  document.getElementById('calcCostIva').value = round0(num('calcCostNet') * (1 + iva));
+  recalcPrice();
+}
+// Changing IVA recomputes "con IVA" keeping "sin IVA" as base
+function onIvaInput() {
+  localStorage.setItem(KEY_CALC_IVA, document.getElementById('calcIva').value);
+  const iva = num('calcIva') / 100;
+  document.getElementById('calcCostIva').value = round0(num('calcCostNet') * (1 + iva));
+  recalcPrice();
+}
+function onParamInput() {
+  localStorage.setItem(KEY_CALC_COMM, document.getElementById('calcCommission').value);
+  localStorage.setItem(KEY_CALC_PROFIT, document.getElementById('calcProfit').value);
+  calcManualPrice = false; // params changed → resuggest price
+  recalcPrice();
+}
+function onFinalPriceInput() {
+  calcManualPrice = true; // user is overriding the final price
+  recalcPrice();
+}
+function useSuggestedPrice() {
+  calcManualPrice = false;
+  recalcPrice();
+}
+
+function round0(n) { return Math.round(n); }
+
+function recalcPrice() {
+  if (!document.getElementById('calcCostIva')) return;
+  const cost = num('calcCostIva');          // real disbursement (con IVA)
+  const c = Math.min(num('calcCommission'), 99) / 100; // Uber commission
+  const g = num('calcProfit') / 100;        // desired profit margin over cost
+
+  // Suggested sale price so that, after Uber commission, profit = cost * g
+  // price*(1-c) = cost*(1+g)  =>  price = cost*(1+g)/(1-c)
+  const suggested = (1 - c) > 0 ? round0(cost * (1 + g) / (1 - c)) : 0;
+
+  document.getElementById('calcSuggested').textContent = fmtPrice(suggested);
+
+  // Final price field: follow the suggestion unless manually overridden
+  const finalEl = document.getElementById('calcFinalPrice');
+  if (!calcManualPrice) finalEl.value = suggested || '';
+  const price = num('calcFinalPrice');
+
+  const commissionAmt = round0(price * c);
+  const net = price - commissionAmt;        // what the merchant receives
+  const profit = round0(net - cost);        // valor neto de ganancia
+  const margin = cost > 0 ? (profit / cost) * 100 : 0;
+
+  document.getElementById('outCost').textContent = fmtPrice(cost);
+  document.getElementById('outCommission').textContent = '− ' + fmtPrice(commissionAmt);
+  document.getElementById('outNet').textContent = fmtPrice(net);
+
+  const profitEl = document.getElementById('outProfit');
+  profitEl.textContent = fmtPrice(profit);
+  profitEl.className = 'val ' + (profit >= 0 ? 'pos' : 'neg');
+
+  const marginEl = document.getElementById('outMargin');
+  marginEl.textContent = (margin >= 0 ? '' : '') + margin.toFixed(1) + '%';
+  marginEl.className = 'val ' + (profit >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('calcSuggestedSub').textContent =
+    `Costo ${fmtPrice(cost)} · comisión ${(c*100).toFixed(0)}% · ganancia objetivo ${(g*100).toFixed(0)}%`;
 }
 
 function escHtml(str) {
