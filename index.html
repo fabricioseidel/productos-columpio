@@ -644,6 +644,62 @@
     font-weight: 700;
     color: var(--blue);
   }
+
+  /* ── FILTER CHIPS ── */
+  .filter-chips {
+    display: flex;
+    gap: 8px;
+    padding: 10px 16px 2px;
+    flex-wrap: wrap;
+  }
+
+  .chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: var(--gray-1);
+    color: var(--gray-4);
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: 'Quicksand', sans-serif;
+  }
+
+  .chip:hover { background: var(--gray-2); }
+  .chip.active { background: var(--blue-light); color: var(--blue); border-color: var(--blue); }
+  .chip .chip-count { opacity: 0.7; font-weight: 700; margin-left: 2px; }
+
+  /* ── REMOVE IMAGE BUTTON ── */
+  .remove-img-btn {
+    display: none;
+    width: 100%;
+    justify-content: center;
+    margin: -8px 0 16px;
+  }
+  .remove-img-btn.show { display: inline-flex; }
+
+  .icon-btn-dup { background: var(--gray-1); color: var(--gray-5); }
+  .icon-btn-dup:hover { background: var(--gray-2); color: var(--gray-6); }
+
+  /* ── DESKTOP CENTERED LAYOUT ── */
+  @media (min-width: 760px) {
+    body { background: var(--gray-1); }
+    .top-nav {
+      max-width: 760px;
+      margin: 0 auto;
+      border-radius: 0 0 var(--radius-md) var(--radius-md);
+    }
+    .page {
+      max-width: 760px;
+      margin: 0 auto;
+      background: var(--gray-0);
+      min-height: calc(100vh - 64px);
+      box-shadow: var(--shadow-md);
+    }
+    .cloudinary-config-modal { align-items: center; }
+    .modal-sheet { max-width: 480px; border-radius: var(--radius-lg); }
+  }
 </style>
 </head>
 <body>
@@ -727,6 +783,13 @@
     </button>
   </div>
 
+  <div class="filter-chips" id="filterChips">
+    <button class="chip active" data-filter="all" onclick="setFilter('all')">Todos <span class="chip-count" id="cntAll">0</span></button>
+    <button class="chip" data-filter="active" onclick="setFilter('active')">Activos <span class="chip-count" id="cntActive">0</span></button>
+    <button class="chip" data-filter="inactive" onclick="setFilter('inactive')">Inactivos <span class="chip-count" id="cntInactive">0</span></button>
+    <button class="chip" data-filter="noimg" onclick="setFilter('noimg')">Sin imagen <span class="chip-count" id="cntNoimg">0</span></button>
+  </div>
+
   <div class="list-header">
     <span id="productCount">Cargando...</span>
     <button class="btn btn-ghost" style="padding:5px 10px;font-size:11px" onclick="loadProducts()">↻ Actualizar</button>
@@ -788,6 +851,11 @@
           <span style="font-size:12px;color:var(--gray-5)">Subiendo a Cloudinary...</span>
         </div>
       </div>
+
+      <button type="button" class="btn btn-danger remove-img-btn" id="removeImgBtn" onclick="removeImage()">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+        Quitar imagen
+      </button>
 
       <input type="hidden" id="productId" value="" />
       <input type="hidden" id="imageUrl" value="" />
@@ -970,6 +1038,8 @@ let CLOUDINARY_PRESET = localStorage.getItem(KEY_CL_PRESET) || 'columpio';
 let allProducts = [];
 let editingProductId = null;
 let currentCard = 1;
+let currentFilter = 'all';
+let formDirty = false;
 
 // ══════════════════════════════════════════════════
 // INIT
@@ -979,6 +1049,37 @@ document.addEventListener('DOMContentLoaded', () => {
   checkConfig();
   loadProducts();
   loadCategories();
+
+  // Mark the form as dirty on any edit
+  ['fieldName','fieldBarcode','fieldCategory','fieldVariant','fieldDescription',
+   'fieldSubCategory','fieldPrice','fieldOfferPrice','fieldUnit','fieldMeasureVal','fieldActive']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', () => { formDirty = true; });
+    });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Esc closes the config modal
+    if (e.key === 'Escape') {
+      closeConfigModal();
+    }
+    // Ctrl/Cmd + S saves when on the edit page
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      if (document.getElementById('page-edicion').classList.contains('active')) {
+        e.preventDefault();
+        saveProduct();
+      }
+    }
+  });
+
+  // Warn before leaving with unsaved changes
+  window.addEventListener('beforeunload', (e) => {
+    if (formDirty && document.getElementById('page-edicion').classList.contains('active')) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 });
 
 function updateDateBadges() {
@@ -1128,7 +1229,8 @@ async function loadProducts() {
   try {
     const data = await sbFetch('products?select=id,barcode,name,category,image_url,is_active,sale_price,description&order=name.asc');
     allProducts = data || [];
-    renderProductList(allProducts);
+    updateFilterCounts();
+    filterProducts();
   } catch (e) {
     showToast('Error cargando productos: ' + e.message, 'error');
   }
@@ -1157,7 +1259,7 @@ function renderProductList(products) {
         <div class="product-card-meta">
           <span>${escHtml(p.barcode || '')}</span>
           ${p.category ? `<span>• ${escHtml(p.category)}</span>` : ''}
-          ${p.sale_price ? `<span>• $${p.sale_price}</span>` : ''}
+          ${p.sale_price ? `<span>• ${fmtPrice(p.sale_price)}</span>` : ''}
         </div>
         <div style="margin-top:4px">
           <span class="badge ${p.is_active ? 'badge-active' : 'badge-inactive'}">${p.is_active ? 'Activo' : 'Inactivo'}</span>
@@ -1165,23 +1267,52 @@ function renderProductList(products) {
         </div>
       </div>
       <div class="product-card-actions">
-        <button class="icon-btn icon-btn-edit" onclick="event.stopPropagation(); editProduct(${p.id})">
+        <button class="icon-btn icon-btn-edit" title="Editar" onclick="event.stopPropagation(); editProduct(${p.id})">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="icon-btn icon-btn-dup" title="Duplicar" onclick="event.stopPropagation(); duplicateProduct(${p.id})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        </button>
+        <button class="icon-btn icon-btn-del" title="Eliminar" onclick="event.stopPropagation(); deleteProduct(${p.id})">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
         </button>
       </div>
     </div>
   `).join('');
 }
 
+function updateFilterCounts() {
+  document.getElementById('cntAll').textContent = allProducts.length;
+  document.getElementById('cntActive').textContent = allProducts.filter(p => p.is_active).length;
+  document.getElementById('cntInactive').textContent = allProducts.filter(p => !p.is_active).length;
+  document.getElementById('cntNoimg').textContent = allProducts.filter(p => !p.image_url).length;
+}
+
+function setFilter(f) {
+  currentFilter = f;
+  document.querySelectorAll('#filterChips .chip').forEach(c =>
+    c.classList.toggle('active', c.dataset.filter === f));
+  filterProducts();
+}
+
 function filterProducts() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
-  if (!q) { renderProductList(allProducts); return; }
-  const filtered = allProducts.filter(p =>
-    (p.name || '').toLowerCase().includes(q) ||
-    (p.barcode || '').toLowerCase().includes(q) ||
-    (p.category || '').toLowerCase().includes(q)
-  );
-  renderProductList(filtered);
+  let list = allProducts;
+
+  // Apply chip filter
+  if (currentFilter === 'active')   list = list.filter(p => p.is_active);
+  else if (currentFilter === 'inactive') list = list.filter(p => !p.is_active);
+  else if (currentFilter === 'noimg')    list = list.filter(p => !p.image_url);
+
+  // Apply text search
+  if (q) {
+    list = list.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.barcode || '').toLowerCase().includes(q) ||
+      (p.category || '').toLowerCase().includes(q)
+    );
+  }
+  renderProductList(list);
 }
 
 // ══════════════════════════════════════════════════
@@ -1265,11 +1396,11 @@ function clearForm() {
   document.getElementById('fieldUnit').value = 'un';
   document.getElementById('fieldMeasureVal').value = '1';
   document.getElementById('fieldActive').value = 'true';
+  document.getElementById('imageFileInput').value = '';
 
   // Clear image preview
-  const area = document.getElementById('imageUploadArea');
-  const existingImg = area.querySelector('img');
-  if (existingImg) existingImg.remove();
+  setImagePreview('');
+  formDirty = false;
 }
 
 async function editProduct(id) {
@@ -1295,18 +1426,11 @@ async function editProduct(id) {
     document.getElementById('fieldActive').value = p.is_active ? 'true' : 'false';
 
     // Set image preview
-    const area = document.getElementById('imageUploadArea');
-    const oldImg = area.querySelector('img');
-    if (oldImg) oldImg.remove();
-    if (p.image_url) {
-      const img = document.createElement('img');
-      img.src = p.image_url;
-      img.alt = p.name;
-      area.insertBefore(img, area.querySelector('.upload-overlay'));
-    }
+    setImagePreview(p.image_url || '');
 
     switchPage('edicion');
     switchCard(1);
+    formDirty = false;
   } catch (e) {
     showToast('Error: ' + e.message, 'error');
   } finally {
@@ -1366,17 +1490,23 @@ async function saveProduct() {
       });
       showToast('✅ Producto creado', 'success');
     }
+    formDirty = false;
     await loadProducts();
     switchPage('visualizador');
   } catch (e) {
-    showToast('Error guardando: ' + e.message, 'error');
+    let msg = e.message || '';
+    if (msg.includes('23505') || msg.toLowerCase().includes('duplicate')) {
+      msg = `Ya existe un producto con el código "${barcode}". Usa uno distinto.`;
+    }
+    showToast('Error guardando: ' + msg, 'error');
   } finally {
     hideLoading();
   }
 }
 
 function confirmExit() {
-  if (confirm('¿Salir sin guardar los cambios?')) {
+  if (!formDirty || confirm('¿Salir sin guardar los cambios?')) {
+    formDirty = false;
     switchPage('visualizador');
   }
 }
@@ -1389,8 +1519,21 @@ async function handleImageUpload(event) {
   if (!file) return;
 
   if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) {
-    document.getElementById('cloudinaryModal').classList.add('show');
+    openConfigModal();
     showToast('Configura Cloudinary primero', 'error');
+    event.target.value = '';
+    return;
+  }
+
+  // Client-side validation: type + size (max 8MB)
+  if (!file.type.startsWith('image/')) {
+    showToast('El archivo debe ser una imagen', 'error');
+    event.target.value = '';
+    return;
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    showToast('La imagen supera los 8MB. Usa una más liviana.', 'error');
+    event.target.value = '';
     return;
   }
 
@@ -1411,17 +1554,10 @@ async function handleImageUpload(event) {
     if (!res.ok) throw new Error('Error al subir imagen');
     const data = await res.json();
 
-    // Store URL
+    // Store URL + preview
     document.getElementById('imageUrl').value = data.secure_url;
-
-    // Show preview
-    const area = document.getElementById('imageUploadArea');
-    const oldImg = area.querySelector('img');
-    if (oldImg) oldImg.remove();
-    const img = document.createElement('img');
-    img.src = data.secure_url;
-    img.alt = 'Producto';
-    area.insertBefore(img, area.querySelector('.upload-overlay'));
+    setImagePreview(data.secure_url);
+    formDirty = true;
 
     showToast('✅ Imagen subida', 'success');
   } catch (e) {
@@ -1540,7 +1676,7 @@ async function loadUberPreview() {
           <div class="uber-item-name">${escHtml(p.name || '')}</div>
           <div class="uber-item-sub">${escHtml(p.barcode || '')} ${p.category ? '• ' + escHtml(p.category) : ''}</div>
         </div>
-        <div class="price-tag">$${p.sale_price || 0}</div>
+        <div class="price-tag">${fmtPrice(p.sale_price)}</div>
       </div>
     `).join('') + '</div>';
   } catch (e) {
@@ -1574,6 +1710,97 @@ function showToast(msg, type = '') {
 function escHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ══════════════════════════════════════════════════
+// PRICE FORMAT (CLP)
+// ══════════════════════════════════════════════════
+function fmtPrice(n) {
+  const num = Number(n) || 0;
+  return '$' + num.toLocaleString('es-CL');
+}
+
+// ══════════════════════════════════════════════════
+// DELETE PRODUCT
+// ══════════════════════════════════════════════════
+async function deleteProduct(id) {
+  const p = allProducts.find(x => x.id === id);
+  const name = p ? p.name : 'este producto';
+  if (!confirm(`¿Eliminar "${name}"?\n\nEsta acción no se puede deshacer.`)) return;
+
+  showLoading('Eliminando...');
+  try {
+    await sbFetch(`products?id=eq.${id}`, { method: 'DELETE' });
+    showToast('🗑️ Producto eliminado', 'success');
+    await loadProducts();
+  } catch (e) {
+    showToast('Error eliminando: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ══════════════════════════════════════════════════
+// DUPLICATE PRODUCT
+// ══════════════════════════════════════════════════
+async function duplicateProduct(id) {
+  showLoading('Duplicando...');
+  try {
+    const data = await sbFetch(`products?id=eq.${id}&select=*`);
+    const p = data && data[0];
+    if (!p) { showToast('Producto no encontrado', 'error'); return; }
+
+    // Prepare form as a NEW product (no id, blank barcode since it's unique)
+    editingProductId = null;
+    document.getElementById('productId').value = '';
+    document.getElementById('imageUrl').value = p.image_url || '';
+    document.getElementById('fieldName').value = (p.name || '') + ' (copia)';
+    document.getElementById('fieldBarcode').value = '';
+    document.getElementById('fieldCategory').value = p.category || '';
+    document.getElementById('fieldVariant').value = (p.features && p.features.variante) || '';
+    document.getElementById('fieldDescription').value = p.description || '';
+    document.getElementById('fieldSubCategory').value = (p.features && p.features.subcategoria) || '';
+    document.getElementById('fieldPrice').value = p.sale_price || '';
+    document.getElementById('fieldOfferPrice').value = p.offer_price || '';
+    document.getElementById('fieldUnit').value = p.measurement_unit || 'un';
+    document.getElementById('fieldMeasureVal').value = p.measurement_value || '1';
+    document.getElementById('fieldActive').value = p.is_active ? 'true' : 'false';
+    setImagePreview(p.image_url || '');
+
+    switchPage('edicion');
+    switchCard(1);
+    formDirty = true;
+    showToast('📋 Producto duplicado. Asigna un código nuevo y guarda.', '');
+    document.getElementById('fieldBarcode').focus();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
+
+// ══════════════════════════════════════════════════
+// IMAGE PREVIEW HELPERS
+// ══════════════════════════════════════════════════
+function setImagePreview(url) {
+  const area = document.getElementById('imageUploadArea');
+  const oldImg = area.querySelector('img');
+  if (oldImg) oldImg.remove();
+  if (url) {
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = 'Producto';
+    area.insertBefore(img, area.querySelector('.upload-overlay'));
+  }
+  document.getElementById('removeImgBtn').classList.toggle('show', !!url);
+}
+
+function removeImage() {
+  document.getElementById('imageUrl').value = '';
+  setImagePreview('');
+  document.getElementById('imageFileInput').value = '';
+  formDirty = true;
+  showToast('Imagen quitada (recuerda guardar)', '');
 }
 </script>
 </body>
