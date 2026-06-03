@@ -684,6 +684,93 @@
   .icon-btn-dup { background: var(--gray-1); color: var(--gray-5); }
   .icon-btn-dup:hover { background: var(--gray-2); color: var(--gray-6); }
 
+  /* ── GALLERY (multi-imagen) ── */
+  .hint { font-size: 12px; color: var(--gray-4); margin-bottom: 10px; line-height: 1.4; }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+    gap: 8px;
+  }
+  .gallery-thumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--gray-1);
+  }
+  .gallery-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .gallery-thumb .rm {
+    position: absolute;
+    top: 3px; right: 3px;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .gallery-add {
+    display: flex; align-items: center; justify-content: center;
+    aspect-ratio: 1;
+    border: 2px dashed var(--gray-2);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    color: var(--gray-3);
+    font-size: 26px;
+    transition: all var(--transition);
+  }
+  .gallery-add:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-light); }
+
+  /* ── TIPOS / VARIANTES ── */
+  .tipo-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--gray-2);
+  }
+  .tipo-row:last-child { border-bottom: none; }
+  .tipo-thumb {
+    width: 52px; height: 52px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);
+    background: var(--gray-1);
+    overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--gray-3);
+    border: 1.5px solid var(--gray-2);
+    font-size: 20px;
+    transition: border-color var(--transition);
+  }
+  .tipo-thumb:hover { border-color: var(--blue); }
+  .tipo-thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .tipo-row input {
+    flex: 1; min-width: 0;
+    padding: 9px 12px;
+    border: 1.5px solid var(--gray-2);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    outline: none;
+  }
+  .tipo-row input:focus { border-color: var(--blue); }
+  .tipo-row .rm {
+    background: var(--red-light);
+    color: var(--red);
+    border: none;
+    border-radius: var(--radius-sm);
+    width: 36px; height: 36px;
+    flex-shrink: 0;
+    cursor: pointer;
+    font-size: 15px;
+  }
+  .tipo-row .rm:hover { background: var(--red); color: #fff; }
+  .badge-tipos { background: #EDE7F6; color: #5E35B1; margin-left: 4px; }
+
   /* ── PRICE CALCULATOR ── */
   .calc-out {
     display: flex;
@@ -995,6 +1082,43 @@
 
       <hr class="divider">
 
+      <!-- GALERÍA DE IMÁGENES -->
+      <div class="collapse-header open" onclick="toggleCollapse(this)">
+        <span>Galería de imágenes</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+      </div>
+      <div class="collapse-body">
+        <p class="hint">Varias fotos del mismo producto. Toca ＋ para agregar una o varias.</p>
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <input type="file" id="galleryInput" accept="image/*" multiple style="display:none" onchange="handleGalleryUpload(event)" />
+      </div>
+
+      <hr class="divider">
+
+      <!-- TIPOS / VARIANTES -->
+      <div class="collapse-header open" onclick="toggleCollapse(this)">
+        <span>Tipos / Variantes</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
+      </div>
+      <div class="collapse-body">
+        <p class="hint">Cada tipo (ej: Harry Potter, Princesa, Rojo, Azul…) con su nombre e imagen. En el CSV de Uber Eats cada tipo será una fila con código <strong>CÓDIGO-1, CÓDIGO-2…</strong></p>
+        <div id="tiposList"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
+          <button type="button" class="btn btn-secondary" onclick="addTipo()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar tipo
+          </button>
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('tiposBulkInput').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Subir varias (1 tipo por foto)
+          </button>
+        </div>
+        <input type="file" id="tipoImgInput" accept="image/*" style="display:none" onchange="handleTipoImage(event)" />
+        <input type="file" id="tiposBulkInput" accept="image/*" multiple style="display:none" onchange="handleTiposBulkUpload(event)" />
+      </div>
+
+      <hr class="divider">
+
       <div class="collapse-header open" onclick="toggleCollapse(this)">
         <span>Precios</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 15 12 9 6 15"/></svg>
@@ -1230,6 +1354,9 @@ let editingProductId = null;
 let currentCard = 1;
 let currentFilter = 'all';
 let formDirty = false;
+let galleryUrls = [];      // URLs de imágenes de la galería
+let tipos = [];            // [{ nombre, imagen }]
+let tipoUploadIndex = -1;  // índice del tipo al que se le sube imagen
 
 // ══════════════════════════════════════════════════
 // INIT
@@ -1240,6 +1367,8 @@ document.addEventListener('DOMContentLoaded', () => {
   loadProducts();
   loadCategories();
   initCalculator();
+  renderGallery();
+  renderTipos();
 
   // Mark the form as dirty on any edit
   ['fieldName','fieldBarcode','fieldCategory','fieldVariant','fieldDescription',
@@ -1421,7 +1550,7 @@ async function sbFetch(endpoint, options = {}) {
 // ══════════════════════════════════════════════════
 async function loadProducts() {
   try {
-    const data = await sbFetch('products?select=id,barcode,name,category,image_url,is_active,sale_price,description&order=name.asc');
+    const data = await sbFetch('products?select=id,barcode,name,category,image_url,is_active,sale_price,description,features,gallery&order=name.asc');
     allProducts = data || [];
     updateFilterCounts();
     filterProducts();
@@ -1458,6 +1587,8 @@ function renderProductList(products) {
         <div style="margin-top:4px">
           <span class="badge ${p.is_active ? 'badge-active' : 'badge-inactive'}">${p.is_active ? 'Activo' : 'Inactivo'}</span>
           ${p.image_url ? `<span class="badge badge-uber" style="margin-left:4px">📷 Imagen</span>` : ''}
+          ${(p.features && Array.isArray(p.features.tipos) && p.features.tipos.length) ? `<span class="badge badge-tipos" style="margin-left:4px">🎨 ${p.features.tipos.length} tipos</span>` : ''}
+          ${(Array.isArray(p.gallery) && p.gallery.length) ? `<span class="badge badge-uber" style="margin-left:4px">🖼 ${p.gallery.length}</span>` : ''}
         </div>
       </div>
       <div class="product-card-actions">
@@ -1592,8 +1723,12 @@ function clearForm() {
   document.getElementById('fieldActive').value = 'true';
   document.getElementById('imageFileInput').value = '';
 
-  // Clear image preview
+  // Clear image preview, gallery and tipos
   setImagePreview('');
+  galleryUrls = [];
+  tipos = [];
+  renderGallery();
+  renderTipos();
   formDirty = false;
 }
 
@@ -1621,6 +1756,12 @@ async function editProduct(id) {
 
     // Set image preview
     setImagePreview(p.image_url || '');
+
+    // Gallery + tipos
+    galleryUrls = Array.isArray(p.gallery) ? p.gallery.slice() : [];
+    tipos = (p.features && Array.isArray(p.features.tipos)) ? p.features.tipos.map(t => ({ nombre: t.nombre || '', imagen: t.imagen || '' })) : [];
+    renderGallery();
+    renderTipos();
 
     switchPage('edicion');
     switchCard(1);
@@ -1652,6 +1793,7 @@ async function saveProduct() {
     measurement_value: parseFloat(document.getElementById('fieldMeasureVal').value) || 1,
     is_active: document.getElementById('fieldActive').value === 'true',
     image_url: document.getElementById('imageUrl').value || null,
+    gallery: galleryUrls.length ? galleryUrls : null,
     updated_at: new Date().toISOString(),
   };
 
@@ -1661,7 +1803,13 @@ async function saveProduct() {
   if (variante) features.variante = variante;
   const subcategoria = document.getElementById('fieldSubCategory').value.trim();
   if (subcategoria) features.subcategoria = subcategoria;
-  
+
+  // Tipos / variantes (descarta los vacíos)
+  const cleanTipos = tipos
+    .map(t => ({ nombre: (t.nombre || '').trim(), imagen: t.imagen || '' }))
+    .filter(t => t.nombre || t.imagen);
+  if (cleanTipos.length) features.tipos = cleanTipos;
+
   if (Object.keys(features).length > 0) {
     payload.features = features;
   } else {
@@ -1708,56 +1856,167 @@ function confirmExit() {
 // ══════════════════════════════════════════════════
 // IMAGE UPLOAD — CLOUDINARY
 // ══════════════════════════════════════════════════
-async function handleImageUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
+// Reusable Cloudinary uploader (validates + returns secure_url)
+async function uploadToCloudinary(file) {
   if (!CLOUDINARY_CLOUD || !CLOUDINARY_PRESET) {
     openConfigModal();
-    showToast('Configura Cloudinary primero', 'error');
-    event.target.value = '';
-    return;
+    throw new Error('Configura Cloudinary primero');
   }
+  if (!file.type.startsWith('image/')) throw new Error('El archivo debe ser una imagen');
+  if (file.size > 8 * 1024 * 1024) throw new Error('La imagen supera los 8MB. Usa una más liviana.');
 
-  // Client-side validation: type + size (max 8MB)
-  if (!file.type.startsWith('image/')) {
-    showToast('El archivo debe ser una imagen', 'error');
-    event.target.value = '';
-    return;
-  }
-  if (file.size > 8 * 1024 * 1024) {
-    showToast('La imagen supera los 8MB. Usa una más liviana.', 'error');
-    event.target.value = '';
-    return;
-  }
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', CLOUDINARY_PRESET);
+  formData.append('folder', 'productos');
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
+    method: 'POST',
+    body: formData
+  });
+  if (!res.ok) throw new Error('Error al subir imagen');
+  const data = await res.json();
+  return data.secure_url;
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file) return;
 
   const indicator = document.getElementById('uploadingIndicator');
   indicator.style.display = 'flex';
-
   try {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('upload_preset', CLOUDINARY_PRESET);
-    formData.append('folder', 'productos');
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`, {
-      method: 'POST',
-      body: formData
-    });
-
-    if (!res.ok) throw new Error('Error al subir imagen');
-    const data = await res.json();
-
-    // Store URL + preview
-    document.getElementById('imageUrl').value = data.secure_url;
-    setImagePreview(data.secure_url);
+    const url = await uploadToCloudinary(file);
+    document.getElementById('imageUrl').value = url;
+    setImagePreview(url);
     formDirty = true;
-
     showToast('✅ Imagen subida', 'success');
   } catch (e) {
     showToast('Error subiendo imagen: ' + e.message, 'error');
   } finally {
     indicator.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════════════
+// GALERÍA (multi-imagen)
+// ══════════════════════════════════════════════════
+function renderGallery() {
+  const g = document.getElementById('galleryGrid');
+  if (!g) return;
+  g.innerHTML = galleryUrls.map((u, i) =>
+    `<div class="gallery-thumb"><img src="${escHtml(u)}" alt=""><button type="button" class="rm" onclick="removeGalleryImg(${i})">×</button></div>`
+  ).join('') +
+  `<div class="gallery-add" onclick="document.getElementById('galleryInput').click()">＋</div>`;
+}
+
+async function handleGalleryUpload(event) {
+  const files = [...event.target.files];
+  event.target.value = '';
+  if (!files.length) return;
+  showLoading(`Subiendo ${files.length} imagen(es)...`);
+  try {
+    for (const f of files) {
+      const url = await uploadToCloudinary(f);
+      galleryUrls.push(url);
+    }
+    formDirty = true;
+    renderGallery();
+    showToast(`✅ ${files.length} imagen(es) agregada(s)`, 'success');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+    renderGallery();
+  } finally {
+    hideLoading();
+  }
+}
+
+function removeGalleryImg(i) {
+  galleryUrls.splice(i, 1);
+  formDirty = true;
+  renderGallery();
+}
+
+// ══════════════════════════════════════════════════
+// TIPOS / VARIANTES
+// ══════════════════════════════════════════════════
+function renderTipos() {
+  const c = document.getElementById('tiposList');
+  if (!c) return;
+  if (!tipos.length) {
+    c.innerHTML = '<p class="hint" style="margin:0">Aún no hay tipos. Agrega uno o sube varias fotos.</p>';
+    return;
+  }
+  c.innerHTML = tipos.map((t, i) => `
+    <div class="tipo-row">
+      <div class="tipo-thumb" onclick="openTipoImage(${i})" title="Subir/cambiar imagen">
+        ${t.imagen ? `<img src="${escHtml(t.imagen)}" alt="">` : '📷'}
+      </div>
+      <input type="text" placeholder="Nombre del tipo (ej: Harry Potter, Rojo...)" value="${escHtml(t.nombre || '')}" oninput="updateTipoName(${i}, this.value)" />
+      <button type="button" class="rm" onclick="removeTipo(${i})" title="Quitar tipo">🗑️</button>
+    </div>
+  `).join('');
+}
+
+function addTipo() {
+  tipos.push({ nombre: '', imagen: '' });
+  formDirty = true;
+  renderTipos();
+}
+
+function removeTipo(i) {
+  tipos.splice(i, 1);
+  formDirty = true;
+  renderTipos();
+}
+
+function updateTipoName(i, v) {
+  tipos[i].nombre = v;
+  formDirty = true;
+}
+
+function openTipoImage(i) {
+  tipoUploadIndex = i;
+  document.getElementById('tipoImgInput').click();
+}
+
+async function handleTipoImage(event) {
+  const file = event.target.files[0];
+  event.target.value = '';
+  if (!file || tipoUploadIndex < 0) return;
+  showLoading('Subiendo imagen...');
+  try {
+    const url = await uploadToCloudinary(file);
+    tipos[tipoUploadIndex].imagen = url;
+    formDirty = true;
+    renderTipos();
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+    tipoUploadIndex = -1;
+  }
+}
+
+async function handleTiposBulkUpload(event) {
+  const files = [...event.target.files];
+  event.target.value = '';
+  if (!files.length) return;
+  showLoading(`Subiendo ${files.length} imágenes...`);
+  try {
+    for (const f of files) {
+      const url = await uploadToCloudinary(f);
+      tipos.push({ nombre: '', imagen: url });
+    }
+    formDirty = true;
+    renderTipos();
+    showToast(`✅ ${files.length} tipo(s) creado(s). Ponles nombre.`, 'success');
+  } catch (e) {
+    showToast('Error: ' + e.message, 'error');
+    renderTipos();
+  } finally {
+    hideLoading();
   }
 }
 
@@ -1782,12 +2041,7 @@ async function exportUberEatsCSV() {
   showLoading('Generando CSV Uber Eats...');
   try {
     const data = await sbFetch('products?is_active=eq.true&select=*&order=name.asc');
-    const eligible = (data || []).filter(p => p.image_url && p.name && p.barcode);
-
-    if (!eligible.length) {
-      showToast('No hay productos activos con imagen para exportar', 'error');
-      return;
-    }
+    const products = (data || []).filter(p => p.name && p.barcode);
 
     // Uber Eats Grocery CSV format
     const headers = [
@@ -1798,24 +2052,45 @@ async function exportUberEatsCSV() {
       'HFSS Item', 'Alcohol Units', 'Quantity Restriction'
     ];
 
-    const rows = eligible.map(p => [
-      p.barcode || '',
-      `"${(p.name || '').replace(/"/g, '""')}"`,
-      `"${(p.category || '').replace(/"/g, '""')}"`,
-      `"${(p.features?.subcategoria || '').replace(/"/g, '""')}"`,
+    const q = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
+    const buildRow = (p, code, name, image) => [
+      code,
+      q(name),
+      q(p.category || ''),
+      q(p.features?.subcategoria || ''),
       '',
       p.sale_price || 0,
       p.offer_price || p.sale_price || 0,
       '19',
-      `"${(p.description || '').replace(/"/g, '""')}"`,
-      p.image_url || '',
-      p.is_active ? 'TRUE' : 'FALSE',
+      q(p.description || ''),
+      image || '',
+      'TRUE',
       p.measurement_unit || 'un',
       p.measurement_value || 1,
-      '',
-      '',
-      ''
-    ]);
+      '', '', ''
+    ];
+
+    // Una fila por tipo; si el producto no tiene tipos, una fila por producto
+    const rows = [];
+    products.forEach(p => {
+      const ts = (p.features && Array.isArray(p.features.tipos)) ? p.features.tipos : [];
+      const hasUsableTipos = ts.some(t => t.imagen || p.image_url);
+      if (hasUsableTipos) {
+        ts.forEach((t, i) => {
+          const img = t.imagen || p.image_url || '';
+          if (!img) return;
+          const nm = t.nombre ? `${p.name} ${t.nombre}` : `${p.name} (tipo ${i + 1})`;
+          rows.push(buildRow(p, `${p.barcode}-${i + 1}`, nm, img));
+        });
+      } else if (p.image_url) {
+        rows.push(buildRow(p, p.barcode, p.name, p.image_url));
+      }
+    });
+
+    if (!rows.length) {
+      showToast('No hay productos activos con imagen para exportar', 'error');
+      return;
+    }
 
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -1826,7 +2101,7 @@ async function exportUberEatsCSV() {
     a.click();
     URL.revokeObjectURL(url);
 
-    showToast(`✅ CSV exportado con ${eligible.length} productos`, 'success');
+    showToast(`✅ CSV exportado con ${rows.length} filas`, 'success');
   } catch (e) {
     showToast('Error exportando: ' + e.message, 'error');
   } finally {
@@ -2048,6 +2323,11 @@ async function duplicateProduct(id) {
     document.getElementById('fieldMeasureVal').value = p.measurement_value || '1';
     document.getElementById('fieldActive').value = p.is_active ? 'true' : 'false';
     setImagePreview(p.image_url || '');
+
+    galleryUrls = Array.isArray(p.gallery) ? p.gallery.slice() : [];
+    tipos = (p.features && Array.isArray(p.features.tipos)) ? p.features.tipos.map(t => ({ nombre: t.nombre || '', imagen: t.imagen || '' })) : [];
+    renderGallery();
+    renderTipos();
 
     switchPage('edicion');
     switchCard(1);

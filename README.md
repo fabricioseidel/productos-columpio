@@ -38,7 +38,8 @@ Esta tabla contiene toda la información de los productos del catálogo.
 | `measurement_value` | `numeric` (Default `1`) | Valor de cantidad (ej: `500` en gramos). |
 | `is_active` | `boolean` (Default `true`) | Define si está a la venta. |
 | `image_url` | `text` (Nullable) | Enlace seguro a la imagen en Cloudinary. |
-| `features` | `jsonb` (Nullable) | Guarda en JSON variantes `{ "variante": "..." }` y subcategorías `{ "subcategoria": "..." }`. |
+| `features` | `jsonb` (Nullable) | Guarda en JSON: `{ "variante": "...", "subcategoria": "...", "tipos": [{ "nombre": "...", "imagen": "..." }] }`. Cada `tipo` se exporta como una fila propia en el CSV de Uber Eats. |
+| `gallery` | `jsonb` (Nullable) | Array JSON de URLs de imágenes adicionales del producto (galería). |
 | `updated_at` | `timestamp with time zone` | Fecha de la última actualización. |
 
 #### Tabla: `categories` *(Opcional)*
