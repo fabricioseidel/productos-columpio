@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Creador de Productos — Columpio Kids</title>
 <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
   :root {
     /* Columpio Kids Palette (Soft Terracotta & Sage Green Pastel) */
@@ -1214,13 +1215,20 @@
       </button>
     </div>
 
-    <!-- Export CSV for Uber Eats -->
+    <!-- Export for Uber Eats -->
     <div class="export-card">
-      <h3>📥 Descargar CSV (Formato Uber Eats)</h3>
-      <p>Genera el archivo CSV compatible con Uber Eats Grocery. Solo se incluyen productos activos que tengan imagen.</p>
-      <button class="btn btn-success" style="width:100%;justify-content:center;margin-bottom:8px" onclick="exportUberEatsCSV()">
+      <h3>📥 Exportar a Uber Eats</h3>
+      <p>Archivo alineado a la plantilla de Uber Eats Grocery. Solo productos activos con imagen; cada tipo/variante se exporta como una fila (SKU).</p>
+      <div class="field">
+        <label>Columna de stock (nombre tienda - bodega)</label>
+        <input type="text" id="stockColName" placeholder="ej: Columpio Kids - Bodega 1" oninput="saveStockColName()" />
+      </div>
+      <button class="btn btn-success" style="width:100%;justify-content:center;margin-bottom:8px" onclick="exportUberEatsXLSX()">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0018 9h-1.26A8 8 0 103 16.29"/></svg>
-        Descargar CSV Uber Eats
+        Descargar Excel (.xlsx)
+      </button>
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;margin-bottom:8px" onclick="exportUberEatsCSV()">
+        Descargar CSV (alternativo)
       </button>
       <button class="btn btn-ghost" style="width:100%;justify-content:center" onclick="exportAllJSON()">
         Exportar JSON completo
@@ -1341,6 +1349,7 @@ const KEY_CL_PRESET = 'cf_preset';
 const KEY_CALC_IVA = 'cf_calc_iva';
 const KEY_CALC_COMM = 'cf_calc_comm';
 const KEY_CALC_PROFIT = 'cf_calc_profit';
+const KEY_STOCK_COL = 'cf_stock_col';
 
 // Dynamic config variables loaded from localStorage with default fallbacks
 let SUPABASE_URL = localStorage.getItem(KEY_SB_URL) || 'https://pazmvvuqgqsmymesajmr.supabase.co';
@@ -1369,6 +1378,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initCalculator();
   renderGallery();
   renderTipos();
+  const stockEl = document.getElementById('stockColName');
+  if (stockEl) stockEl.value = localStorage.getItem(KEY_STOCK_COL) || '';
 
   // Mark the form as dirty on any edit
   ['fieldName','fieldBarcode','fieldCategory','fieldVariant','fieldDescription',
@@ -2037,62 +2048,115 @@ async function loadExportStats() {
   }
 }
 
-async function exportUberEatsCSV() {
-  showLoading('Generando CSV Uber Eats...');
+// Nombre de la columna de stock (tienda - bodega)
+function getStockHeader() {
+  return (localStorage.getItem(KEY_STOCK_COL) || '').trim() || 'PRODUCT IN STOCK';
+}
+function saveStockColName() {
+  const el = document.getElementById('stockColName');
+  if (el) localStorage.setItem(KEY_STOCK_COL, el.value);
+}
+
+// Construye los datos alineados a la plantilla de Uber Eats Grocery.
+// Devuelve { headers, rows } con una fila por tipo (valores crudos, sin escapar).
+async function buildUberData() {
+  const data = await sbFetch('products?is_active=eq.true&select=*&order=name.asc');
+  const products = (data || []).filter(p => p.name && p.barcode);
+
+  const headers = [
+    'UPC/EAN',
+    'External ID',
+    'Category',
+    'Sub-Category',
+    'Product Name (+ brand + size / weight)',
+    'Product Type',
+    'Total Alcohol Units',
+    'HFSS Item',
+    'Price (incl VAT)',
+    'IVA',
+    'Description',
+    'Item Image URL',
+    'Quantity Restriction',
+    'External Data',
+    getStockHeader()
+  ];
+
+  const buildRow = (p, code, name, image) => [
+    p.barcode || '',                                  // UPC/EAN (código base)
+    code,                                             // External ID (único por fila/tipo)
+    p.category || '',                                 // Category
+    (p.features && p.features.subcategoria) || '',    // Sub-Category
+    name,                                             // Product Name (+ brand + size / weight)
+    '',                                               // Product Type
+    '',                                               // Total Alcohol Units
+    'No',                                             // HFSS Item
+    p.offer_price || p.sale_price || 0,               // Price (incl VAT)
+    '19%',                                            // IVA
+    p.description || '',                              // Description
+    image || '',                                      // Item Image URL
+    '',                                               // Quantity Restriction
+    '',                                               // External Data
+    1                                                 // En stock (productos activos)
+  ];
+
+  const rows = [];
+  products.forEach(p => {
+    const ts = (p.features && Array.isArray(p.features.tipos)) ? p.features.tipos : [];
+    const hasUsableTipos = ts.some(t => t.imagen || p.image_url);
+    if (hasUsableTipos) {
+      ts.forEach((t, i) => {
+        const img = t.imagen || p.image_url || '';
+        if (!img) return;
+        const nm = t.nombre ? `${p.name} ${t.nombre}` : `${p.name} (tipo ${i + 1})`;
+        rows.push(buildRow(p, `${p.barcode}-${i + 1}`, nm, img));
+      });
+    } else if (p.image_url) {
+      rows.push(buildRow(p, p.barcode, p.name, p.image_url));
+    }
+  });
+
+  return { headers, rows };
+}
+
+// Descarga Excel (.xlsx) — abre directo en Excel
+async function exportUberEatsXLSX() {
+  if (typeof XLSX === 'undefined') {
+    showToast('No se pudo cargar la librería de Excel. Revisa tu conexión.', 'error');
+    return;
+  }
+  showLoading('Generando Excel Uber Eats...');
   try {
-    const data = await sbFetch('products?is_active=eq.true&select=*&order=name.asc');
-    const products = (data || []).filter(p => p.name && p.barcode);
-
-    // Uber Eats Grocery CSV format
-    const headers = [
-      'Item Code', 'Item Name', 'Category', 'Sub Category',
-      'Product Type', 'Price', 'Price With VAT', 'VAT Percentage',
-      'Description', 'Image URL', 'In Stock',
-      'Measurement Unit', 'Measurement Value',
-      'HFSS Item', 'Alcohol Units', 'Quantity Restriction'
-    ];
-
-    const q = s => `"${String(s == null ? '' : s).replace(/"/g, '""')}"`;
-    const buildRow = (p, code, name, image) => [
-      code,
-      q(name),
-      q(p.category || ''),
-      q(p.features?.subcategoria || ''),
-      '',
-      p.sale_price || 0,
-      p.offer_price || p.sale_price || 0,
-      '19',
-      q(p.description || ''),
-      image || '',
-      'TRUE',
-      p.measurement_unit || 'un',
-      p.measurement_value || 1,
-      '', '', ''
-    ];
-
-    // Una fila por tipo; si el producto no tiene tipos, una fila por producto
-    const rows = [];
-    products.forEach(p => {
-      const ts = (p.features && Array.isArray(p.features.tipos)) ? p.features.tipos : [];
-      const hasUsableTipos = ts.some(t => t.imagen || p.image_url);
-      if (hasUsableTipos) {
-        ts.forEach((t, i) => {
-          const img = t.imagen || p.image_url || '';
-          if (!img) return;
-          const nm = t.nombre ? `${p.name} ${t.nombre}` : `${p.name} (tipo ${i + 1})`;
-          rows.push(buildRow(p, `${p.barcode}-${i + 1}`, nm, img));
-        });
-      } else if (p.image_url) {
-        rows.push(buildRow(p, p.barcode, p.name, p.image_url));
-      }
-    });
-
+    const { headers, rows } = await buildUberData();
     if (!rows.length) {
       showToast('No hay productos activos con imagen para exportar', 'error');
       return;
     }
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Uber Eats');
+    XLSX.writeFile(wb, `uber-eats-productos-${new Date().toISOString().slice(0,10)}.xlsx`);
+    showToast(`✅ Excel exportado con ${rows.length} filas`, 'success');
+  } catch (e) {
+    showToast('Error exportando: ' + e.message, 'error');
+  } finally {
+    hideLoading();
+  }
+}
 
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+// Descarga CSV (mismas columnas) — alternativo
+async function exportUberEatsCSV() {
+  showLoading('Generando CSV Uber Eats...');
+  try {
+    const { headers, rows } = await buildUberData();
+    if (!rows.length) {
+      showToast('No hay productos activos con imagen para exportar', 'error');
+      return;
+    }
+    const esc = s => {
+      const v = String(s == null ? '' : s);
+      return /[",\n;]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+    };
+    const csv = [headers.map(esc).join(','), ...rows.map(r => r.map(esc).join(','))].join('\n');
     const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

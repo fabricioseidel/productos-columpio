@@ -8,8 +8,9 @@ Esta es una aplicación web estática de página única (SPA) diseñada para ges
 - **Creación y Edición Guiada:** Formulario dividido en pestañas (Card 1 y Card 2) para ingresar detalles del producto, variantes, descripción de exportación, precios, unidades de medida y estado activo/inactivo.
 - **Carga de Imágenes Directa:** Integración directa con **Cloudinary** para subir y previsualizar imágenes al instante.
 - **Exportación en Lote:**
-  - Descarga de archivo CSV listo para integrar con **Uber Eats Grocery** (solo productos activos con imagen).
-  - Exportación de todo el catálogo en formato JSON.
+  - Descarga en **Excel (.xlsx)** alineado a la plantilla de **Uber Eats Grocery** (abre directo en Excel). Cada tipo/variante se exporta como una fila (SKU) con código `CÓDIGO-1`, `CÓDIGO-2`… Solo productos activos con imagen.
+  - El nombre de la columna de stock (`tienda - bodega`) es configurable desde la pestaña Descarga.
+  - También disponible export CSV alternativo y exportación de todo el catálogo en formato JSON.
 - **Configuración Dinámica:** Panel de ajustes para configurar en caliente la conexión con **Supabase** y **Cloudinary** directamente en la interfaz. Los parámetros se guardan de forma segura en el almacenamiento local del navegador (`localStorage`).
 
 ---
